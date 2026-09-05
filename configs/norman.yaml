@@ -1,0 +1,9 @@
+dataset: norman2019
+raw_path: data/raw/norman2019.h5ad
+processed_dir: data/processed/norman2019
+n_top_genes: 2000
+target_sum: 10000
+split:
+  seed: 0
+  frac_doubles_train: 0.5
+  frac_val: 0.1

@@ -1,0 +1,24 @@
+[project]
+name = "pertbench"
+version = "0.1.0"
+description = "Benchmark of baselines vs. a compositional VAE for single-cell perturbation prediction"
+requires-python = ">=3.10"
+dependencies = [
+    "scanpy",
+    "anndata",
+    "torch",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pertbench"]

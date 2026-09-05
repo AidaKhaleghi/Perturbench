@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# data and outputs are never committed
+data/
+results/
+figures/
+checkpoints/
+wandb/
+*.h5ad
