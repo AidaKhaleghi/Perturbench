@@ -8,7 +8,7 @@ __pycache__/
 uv.lock
 
 # data and outputs are never committed
-data/
+./data/
 results/
 figures/
 checkpoints/
