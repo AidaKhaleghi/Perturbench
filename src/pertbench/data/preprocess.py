@@ -12,6 +12,16 @@ PROCESSED_DIR = Path("data/processed")
 CONTROL_LABEL = "control"
 
 
+def perturbed_genes(adata: ad.AnnData) -> set[str]:
+    """Return the set of all gene names that are perturbed in the dataset."""
+    return {
+        gene
+        for pert in adata.obs["perturbation"].unique()
+        if pert != CONTROL_LABEL
+        for gene in pert.split("_")
+    }
+
+
 def preprocess(
     name: str,
     cfg: PreprocessConfig | None = None,
@@ -39,8 +49,13 @@ def preprocess(
     sc.pp.log1p(adata)
     
     sc.pp.highly_variable_genes(adata, n_top_genes=cfg.n_top_genes, flavor="seurat")
-    adata = adata[:, adata.var["highly_variable"]].copy()
-    
+    hvg_mask = adata.var["highly_variable"].to_numpy()
+    pert_mask = adata.var_names.isin(perturbed_genes(adata))
+    adata.var["is_perturbed_gene"] = pert_mask
+
+    keep = hvg_mask | (pert_mask if cfg.keep_perturbed_genes else np.zeros_like(pert_mask))
+    adata = adata[:, keep].copy()
+
     adata.obs["is_control"] = adata.obs["perturbation"] == CONTROL_LABEL
     
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)

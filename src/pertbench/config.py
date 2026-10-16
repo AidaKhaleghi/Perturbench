@@ -4,6 +4,7 @@ from dataclasses import dataclass
 class PreprocessConfig:
     target_sum: float = 1e4
     n_top_genes: int = 2000
+    keep_perturbed_genes: bool = True
 
 @dataclass
 class EvalConfig:
