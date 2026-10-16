@@ -65,8 +65,6 @@ def preprocess(
     if not sparse.issparse(adata.X):
         adata.X = sparse.csr_matrix(adata.X)
     adata.X = adata.X.astype(np.float32)
-
-    adata.layers["counts"] = adata.X.copy()  # keep the raw counts
     
     sc.pp.normalize_total(adata, target_sum=cfg.target_sum)
     sc.pp.log1p(adata)
