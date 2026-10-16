@@ -92,7 +92,6 @@ if __name__ == "__main__":
     print(a)
     print("first var names:", list(a.var_names[:5]))
     print("max of X:", a.X.max())
-    print("max of raw counts:", a.layers["counts"].max())
 
     perts = [p for p in a.obs["perturbation"].unique() if p != "control"]
     genes = {g for p in perts for g in p.split("_")}
