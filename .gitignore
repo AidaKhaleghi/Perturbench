@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
+uv.lock
 
 # data and outputs are never committed
 data/
