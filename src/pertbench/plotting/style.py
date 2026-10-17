@@ -1,45 +1,48 @@
-"""Single source of truth for figure style. Import this before plotting."""
-
-from __future__ import annotations
-
 from pathlib import Path
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-# One colour per model, used in every figure. Okabe-Ito, colourblind safe.
-MODEL_COLORS = {
-    "mean": "#999999",
-    "additive": "#E69F00",
-    "cpa_no_adv": "#56B4E9",
-    "cpa": "#009E73",
-    "gears_like": "#CC79A7",
+FIGURES_DIR = Path("figures")
+
+# Perturbation types (Plot 1)
+CATEGORY_COLORS = {
+    "control": "#444444",
+    "single": "#56B4E9",
+    "double": "#D55E00",
 }
 
-CONTINUOUS_CMAP = "viridis"
+# One color per model, used in every later figure
+MODEL_COLORS = {
+    "mean": "#999999",
+    "additive": "#0072B2",
+    "cpa": "#D55E00",
+    "cpa_adv": "#CC79A7",
+    "gears": "#009E73",
+}
 
 
-def set_style() -> None:
-    """Apply the project-wide matplotlib settings."""
-    mpl.rcParams.update(
+def apply_style() -> None:
+    """Set global matplotlib settings shared by all figures."""
+    plt.rcParams.update(
         {
-            "figure.dpi": 120,
-            "savefig.dpi": 300,
-            "savefig.bbox": "tight",
             "font.size": 11,
-            "axes.titlesize": 12,
             "axes.labelsize": 11,
+            "axes.titlesize": 12,
+            "xtick.labelsize": 11,
+            "ytick.labelsize": 11,
+            "legend.fontsize": 11,
             "axes.spines.top": False,
             "axes.spines.right": False,
-            "legend.frameon": False,
-            "image.cmap": CONTINUOUS_CMAP,
+            "figure.dpi": 100,
+            "savefig.dpi": 300,
+            "savefig.bbox": "tight",
         }
     )
 
 
-def save(fig: plt.Figure, name: str, outdir: str | Path = "figures") -> None:
-    """Save a figure as both PNG (for the README) and SVG (for reuse)."""
-    outdir = Path(outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    for ext in ("png", "svg"):
-        fig.savefig(outdir / f"{name}.{ext}")
+def save_figure(fig: plt.Figure, name: str) -> None:
+    """Save a figure as PNG (300 DPI) and SVG in the figures folder."""
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIGURES_DIR / f"{name}.png")
+    fig.savefig(FIGURES_DIR / f"{name}.svg")
+    print(f"Saved {FIGURES_DIR / name}.png and .svg")
