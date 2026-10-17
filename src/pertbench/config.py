@@ -9,3 +9,4 @@ class PreprocessConfig:
 @dataclass
 class EvalConfig:
     n_de_genes: int = 20
+    exclude_perturbed_genes: bool = False

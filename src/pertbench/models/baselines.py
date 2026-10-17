@@ -1,5 +1,6 @@
 import anndata as ad
 import numpy as np
+import pandas as pd
 
 from pertbench.data.split import make_split
 from pertbench.data.utils import mean_by_perturbation
