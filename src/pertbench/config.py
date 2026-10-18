@@ -25,3 +25,4 @@ class TrainConfig:
     patience: int | None = 10
     checkpoint_dir: str | None = "results/checkpoints"
     log_every: int = 1
+    restore_best: bool = True

@@ -195,9 +195,9 @@ class CPA(PerturbationModel):
                 print(f"Early stopping at epoch {epoch}. Best epoch: {self.best_epoch_}.")
                 break
 
-        if best_state is not None:
+        if best_state is not None and tc.restore_best:
             module.load_state_dict(best_state)
-        else:
+        elif best_state is None:
             self.best_epoch_ = len(self.history_)
 
     def _require_fitted(self) -> CPAModule:
