@@ -24,3 +24,4 @@ class TrainConfig:
     max_epochs: int = 100
     patience: int | None = 10
     checkpoint_dir: str | None = "results/checkpoints"
+    log_every: int = 1

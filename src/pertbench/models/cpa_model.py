@@ -182,10 +182,14 @@ class CPA(PerturbationModel):
                 torch.save({"model": module.state_dict(), "epoch": epoch}, ckpt_dir / "last.pt")
                 pd.DataFrame(self.history_).to_csv(ckpt_dir / "history.csv", index=False)
 
-            message = f"epoch {epoch:3d} | train {row['train_total']:9.2f}"
-            if self._val is not None:
-                message += f" | val {row['val_total']:9.2f} | val_de_mse {row['val_de_mse']:.4f}"
-            print(f"{message} | {time.time() - start_time:6.0f} s", flush=True)
+            if epoch == 1 or epoch % tc.log_every == 0 or epoch == tc.max_epochs:
+                message = f"epoch {epoch:4d} | train {row['train_total']:9.2f}"
+                if self._val is not None:
+                    message += (
+                        f" | val {row['val_total']:9.2f}"
+                        f" | val_de_mse {row['val_de_mse']:.4f}"
+                    )
+                print(f"{message} | {time.time() - start_time:6.0f} s", flush=True)
 
             if tc.patience is not None and self._val is not None and bad_epochs >= tc.patience:
                 print(f"Early stopping at epoch {epoch}. Best epoch: {self.best_epoch_}.")
