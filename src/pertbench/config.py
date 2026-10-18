@@ -10,3 +10,9 @@ class PreprocessConfig:
 class EvalConfig:
     n_de_genes: int = 20
     exclude_perturbed_genes: bool = False
+
+@dataclass
+class ModelConfig:
+    latent_dim: int = 64
+    hidden_dim:int = 512
+    kl_weight: float = 1e-3
