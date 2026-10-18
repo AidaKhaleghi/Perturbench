@@ -16,3 +16,11 @@ class ModelConfig:
     latent_dim: int = 64
     hidden_dim:int = 512
     kl_weight: float = 1e-3
+
+@dataclass
+class TrainConfig:
+    lr: float = 1e-3
+    batch_size: int = 512
+    max_epochs: int = 100
+    patience: int | None = 10
+    checkpoint_dir: str | None = "results/checkpoints"
