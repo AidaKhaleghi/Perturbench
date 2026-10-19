@@ -16,6 +16,7 @@ MODEL_COLORS = {
     "mean": "#999999",
     "additive": "#0072B2",
     "cpa": "#D55E00",
+    "cpa_small_kl": "#E69F00",
     "cpa_adv": "#CC79A7",
     "gears": "#009E73",
 }
