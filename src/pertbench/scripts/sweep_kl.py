@@ -33,7 +33,7 @@ def shift_slope(model) -> float:
 
 
 rows = []
-for kl in (1e-3, 1e-2, 1e-1, 1.0):
+for kl in (1e-3, 1e-2, 1e-1, 1.0, 3.0, 10.0, 30.0, 100.0):
     cfg = TrainConfig(
         max_epochs=50,
         patience=None,
