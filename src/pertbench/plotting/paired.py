@@ -13,7 +13,6 @@ TITLES = {
     "pearson": "Pearson correlation (higher is better)",
     "mse": "Delta MSE (lower is better)",
 }
-LABEL_OFFSETS = ((12, 10), (12, -14), (-12, 10), (-12, -14), (14, 0))
 
 
 def paired_table(
@@ -24,7 +23,7 @@ def paired_table(
     baseline: str = "additive",
     exclude_own_genes: bool = False,
 ) -> pd.DataFrame:
-    """Return a table of baseline vs model values for each perturbation."""
+    """Return a table with the baseline and model values for each perturbation."""
     part = metrics[
         (metrics["dataset"] == dataset)
         & (metrics["exclude_own_genes"] == exclude_own_genes)
@@ -37,16 +36,22 @@ def paired_table(
     return table.reset_index()
 
 
-def most_extreme(table: pd.DataFrame, n: int = 5, log: bool = False) -> pd.DataFrame:
-    """Return the n rows farthest from the diagonal.
-
-    The distance is the absolute difference, or the absolute log ratio if log is True.
-    """
-    if log:
-        gap = np.log(table["model"] / table["baseline"]).abs()
-    else:
-        gap = (table["model"] - table["baseline"]).abs()
+def most_extreme(table: pd.DataFrame, n: int = 5) -> pd.DataFrame:
+    """Return the n rows with the largest absolute difference from the baseline."""
+    gap = (table["model"] - table["baseline"]).abs()
     return table.loc[gap.sort_values(ascending=False).index[:n]]
+
+
+def label_offset(fx: float, fy: float, k: int) -> tuple[int, int, str]:
+    """Return an offset for a label, given its position in the axis range."""
+    dx = 14 if fx < 0.6 else -14
+    if fy < 0.12:
+        dy = 18
+    elif fy > 0.88:
+        dy = -18
+    else:
+        dy = 14 if k % 2 == 0 else -14
+    return dx, dy, "left" if dx > 0 else "right"
 
 
 def plot_paired(
@@ -57,7 +62,7 @@ def plot_paired(
     n_labels: int = 5,
     exclude_own_genes: bool = False,
 ) -> plt.Figure:
-    """Scatter plot of baseline vs model values for each perturbation."""
+    """Return a figure with two panels, one for each metric."""
     apply_style()
     color = MODEL_COLORS[model]
     fig, axes = plt.subplots(1, 2, figsize=(13, 6.3))
@@ -76,32 +81,40 @@ def plot_paired(
             pad = 0.04 * (hi - lo)
             lo, hi = lo - pad, hi + pad
 
+        def fraction(value: float) -> float:
+            """Position of a value inside the axis range, from 0 to 1."""
+            if log:
+                return (np.log(value) - np.log(lo)) / (np.log(hi) - np.log(lo))
+            return (value - lo) / (hi - lo)
+
         ax.plot([lo, hi], [lo, hi], color="0.4", linestyle="--", linewidth=1.2, zorder=1)
         ax.scatter(x, y, s=42, color=color, edgecolor="white", linewidth=0.6, zorder=3)
         ax.set_xlim(lo, hi)
         ax.set_ylim(lo, hi)
 
-        upper, lower = (model, baseline) if higher_better else (baseline, model)
-        ax.text(0.03, 0.97, f"{upper} better", transform=ax.transAxes,
-                va="top", ha="left", color="0.3")
-        ax.text(0.97, 0.03, f"{lower} better", transform=ax.transAxes,
-                va="bottom", ha="right", color="0.3")
-
-        for k, (_, row) in enumerate(most_extreme(t, n_labels, log).iterrows()):
-            dx, dy = LABEL_OFFSETS[k % len(LABEL_OFFSETS)]
+        for k, (_, row) in enumerate(most_extreme(t, n_labels).iterrows()):
+            dx, dy, ha = label_offset(
+                fraction(row["baseline"]), fraction(row["model"]), k
+            )
             ax.annotate(
                 row["perturbation"],
                 (row["baseline"], row["model"]),
                 xytext=(dx, dy),
                 textcoords="offset points",
-                ha="left" if dx > 0 else "right",
+                ha=ha,
                 va="center",
+                bbox={"boxstyle": "round,pad=0.15", "fc": "white", "ec": "none", "alpha": 0.85},
                 arrowprops={"arrowstyle": "-", "color": "0.5", "lw": 0.8},
+                zorder=6,
             )
 
+        upper = model if higher_better else baseline
         ax.set_xlabel(f"{baseline}: {label}")
         ax.set_ylabel(f"{model}: {label}")
-        ax.set_title(f"{TITLES[metric]}\none point per test perturbation (n = {len(t)})")
+        ax.set_title(
+            f"{TITLES[metric]}\n{len(t)} test perturbations. "
+            f"Above the dashed line: {upper} is better"
+        )
 
     fig.tight_layout()
     return fig
