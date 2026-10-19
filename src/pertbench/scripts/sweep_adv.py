@@ -11,7 +11,7 @@ from pertbench.data.utils import mean_by_perturbation
 from pertbench.eval.de import de_genes_for_perturbations
 from pertbench.models.cpa_model import CPA
 
-ADV_WEIGHTS = (0.0, 1.0, 10.0, 100.0)
+ADV_WEIGHTS = (0.0, 1.0, 10.0, 100.0, 300.0, 1000.0)
 SEEDS = (0, 1)
 
 adata = ad.read_h5ad("data/processed/norman2019.h5ad")
@@ -64,6 +64,7 @@ for adv, seed in [(a, s) for a in ADV_WEIGHTS for s in SEEDS]:
             "val_recon": float(h.val_recon.iloc[-1]),
             "val_kl": float(h.val_kl.iloc[-1]),
             "adv_d_over_prior": adv_ratio,
+            "mse_noise": float(h.val_de_mse.iloc[-10:].std()),
         }
     )
     pd.DataFrame(rows).to_csv("results/sweep_adv_raw.csv", index=False)
@@ -81,6 +82,7 @@ summary = raw.groupby("adv_weight").agg(
     val_recon=("val_recon", "mean"),
     val_kl=("val_kl", "mean"),
     adv_d_over_prior=("adv_d_over_prior", "mean"),
+    mse_noise=("mse_noise", "mean"),
 )
 print("\nReference validation MSE: zero shift 0.659, mean baseline 0.518, additive 0.052")
 print("Collapsed CPA (kl 30, latent 64, lr 3e-4): mse_last10 0.0569, slope 0.735, val_recon about 78")
