@@ -89,6 +89,29 @@ class CPA(PerturbationModel):
         self._train_loop()
         return self
 
+    def load(self, train_data: ad.AnnData, checkpoint) -> "CPA":
+        """Rebuild the network from the training data and load saved weights."""
+        rng = np.random.default_rng(self.seed)
+        names = list(train_data.obs["perturbation"].astype(str).unique())
+        self.vocab_ = PerturbationVocab.from_perturbations(names)
+        self.var_names_ = np.asarray(train_data.var_names)
+        train = to_tensors(train_data, self.vocab_, self.device)
+ 
+        control_idx = torch.nonzero(train.is_control).squeeze(1).cpu().numpy()
+        order = torch.from_numpy(rng.permutation(control_idx)).to(self.device)
+        self.control_x_ = train.x[order]
+ 
+        self.module_ = CPAModule(
+            n_genes=train_data.n_vars,
+            n_perts=len(self.vocab_),
+            latent_dim=self.cfg.latent_dim,
+            hidden_dim=self.cfg.hidden_dim,
+        ).to(self.device)
+        state = torch.load(checkpoint, map_location=self.device)
+        self.module_.load_state_dict(state["model"])
+        self.module_.eval()
+        return self
+
     def _prepare_validation(self, val_data: ad.AnnData) -> dict:
         """Prepare validation tensors, true means, and top DE genes."""
         if not np.array_equal(np.asarray(val_data.var_names), self.var_names_):
