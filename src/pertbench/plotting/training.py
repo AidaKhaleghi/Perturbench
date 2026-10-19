@@ -97,7 +97,7 @@ def plot_training_curves(
             color="0.4",
             linestyle="-.",
             linewidth=1,
-            label=f"lowest validation MSE (epoch {stop})" if i == 0 else None,
+            label=f"lowest {SMOOTH_WINDOW}-epoch average (epoch {stop})" if i == 0 else None,
         )
         ax.set_xlabel("Epoch (number)")
     flat[0].legend(frameon=False)

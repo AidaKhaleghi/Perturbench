@@ -10,7 +10,7 @@ from pertbench.eval.de import de_genes_for_perturbations
 from pertbench.data.utils import mean_by_perturbation
 from pertbench.data.split import make_split
 
-METRIC_NAMES = ("mse", "pearson", "direction_acc")
+METRIC_NAMES = ("mse", "pearson", "direction_acc", "slope")
 
 
 def delta_metrics(pred_delta: np.ndarray, true_delta: np.ndarray) -> dict[str, float]:
@@ -21,7 +21,9 @@ def delta_metrics(pred_delta: np.ndarray, true_delta: np.ndarray) -> dict[str, f
     else:
         pearson = float(np.corrcoef(pred_delta, true_delta)[0, 1])
     direction = float(np.mean(np.sign(pred_delta) == np.sign(true_delta)))
-    return {"mse": mse, "pearson": pearson, "direction_acc": direction}
+    denom = float(true_delta @ true_delta)
+    slope = float(pred_delta @ true_delta / denom) if denom > 0 else float("nan")
+    return {"mse": mse, "pearson": pearson, "direction_acc": direction, "slope": slope}
 
 
 def evaluate_model(
