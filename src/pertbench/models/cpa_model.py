@@ -1,6 +1,5 @@
 import time
 from pathlib import Path
-import gc
 
 import anndata as ad
 import numpy as np
@@ -14,7 +13,7 @@ from pertbench.data.utils import mean_by_perturbation
 from pertbench.eval.de import de_genes_for_perturbations
 from pertbench.eval.metrics import delta_metrics
 from pertbench.models.base import PerturbationModel
-from pertbench.models.cpa import CPAModule, cpa_loss
+from pertbench.models.cpa import CPAModule, Discriminator, cpa_loss, disc_loss, confusion_loss
 
 
 class CPA(PerturbationModel):
@@ -35,6 +34,9 @@ class CPA(PerturbationModel):
         self.name = name
 
         self.module_: CPAModule | None = None
+        self.disc_ : Discriminator | None = None
+        self.prior_ : torch.Tensor | None = None
+        self.adv_prior_loss_ : float | None = None
         self.vocab_: PerturbationVocab | None = None
         self.var_names_: np.ndarray | None = None
         self.train_ = None
@@ -66,6 +68,22 @@ class CPA(PerturbationModel):
             latent_dim=self.cfg.latent_dim,
             hidden_dim=self.cfg.hidden_dim,
         ).to(self.device)
+
+        # The discriminator is built after the module, so the module
+        # weights do not depend on whether the adversary is used
+        self.disc_ = None
+        self.prior_ = None
+        self.adv_prior_loss_ = float("nan")
+        if self.cfg.adv_weight > 0:
+            self.disc_ = Discriminator(
+                self.cfg.latent_dim, len(self.vocab_), self.cfg.disc_hidden_dim
+            ).to(self.device)
+            pert = self.train_.pert
+            self.prior_ = pert.mean(dim=0).clamp(1e-6, 1 - 1e-6)
+            prior_logits = torch.log(self.prior_ / (1 - self.prior_))
+            self.adv_prior_loss_ = float(
+                disc_loss(prior_logits.expand_as(pert), pert)
+            )
 
         self._val = self._prepare_validation(val_data) if val_data is not None else None
         self._train_loop()
@@ -126,13 +144,22 @@ class CPA(PerturbationModel):
     def _train_loop(self) -> None:
         tc = self.train_cfg
         module = self.module_
+        disc = self.disc_
+        adv_weight = self.cfg.adv_weight
         x_all, p_all = self.train_.x, self.train_.pert
         n = x_all.shape[0]
 
         optimizer = torch.optim.Adam(module.parameters(), lr=tc.lr)
+        disc_optimizer = (
+            torch.optim.Adam(disc.parameters(), lr=tc.lr) if disc is not None else None
+        )
         generator = torch.Generator(device=self.device)
         generator.manual_seed(self.seed)
         ckpt_dir = self._checkpoint_dir()
+
+        keys = ["total", "recon", "kl"]
+        if disc is not None:
+            keys += ["adv_d", "adv_conf"]
 
         self.history_ = []
         best_score = float("inf")
@@ -143,17 +170,32 @@ class CPA(PerturbationModel):
         for epoch in range(1, tc.max_epochs + 1):
             module.train()
             order = torch.randperm(n, generator=generator, device=self.device)
-            sums = {k: torch.zeros((), device=self.device) for k in ("total", "recon", "kl")}
+            sums = {k: torch.zeros((), device=self.device) for k in keys}
 
             for start in range(0, n, tc.batch_size):
                 idx = order[start : start + tc.batch_size]
                 x, p = x_all[idx], p_all[idx]
-                x_hat, mu, logvar = module(x, p)
+                x_hat, mu, logvar, z_basal = module.forward_full(x, p)
                 loss = cpa_loss(x_hat, x, mu, logvar, self.cfg.kl_weight)
+                total = loss["total"]
+
+                if disc is not None:
+                    # 1. Update the discriminator on the detached basal latent
+                    d_loss = disc_loss(disc(z_basal.detach()), p)
+                    disc_optimizer.zero_grad(set_to_none=True)
+                    d_loss.backward()
+                    disc_optimizer.step()
+                    # 2. Add the confusion loss to the VAE loss
+                    conf = confusion_loss(disc(z_basal), self.prior_)
+                    total = total + adv_weight * conf
+                    loss["adv_d"] = d_loss.detach()
+                    loss["adv_conf"] = conf.detach()
+
+                # 3. Update the VAE parameters only
                 optimizer.zero_grad(set_to_none=True)
-                loss["total"].backward()
+                total.backward()
                 optimizer.step()
-                for key in sums:
+                for key in keys:
                     sums[key] += loss[key].detach() * len(idx)
 
             row = {"epoch": epoch}
@@ -184,6 +226,8 @@ class CPA(PerturbationModel):
 
             if epoch == 1 or epoch % tc.log_every == 0 or epoch == tc.max_epochs:
                 message = f"epoch {epoch:4d} | train {row['train_total']:9.2f}"
+                if disc is not None:
+                    message += f" | adv_d {row['train_adv_d']:.3f}"
                 if self._val is not None:
                     message += (
                         f" | val {row['val_total']:9.2f}"
@@ -234,25 +278,19 @@ if __name__ == "__main__":
     train = adata[adata.obs["perturbation"].isin(split.train)].copy()
     val = adata[adata.obs["perturbation"].isin(split.val)].copy()
 
-    # Run 1: three epochs, no early stopping
-    ckpt = "results/checkpoints_check"
-    cfg = TrainConfig(max_epochs=3, patience=None, checkpoint_dir=ckpt)
+    # Run 1: adv_weight = 0 must reproduce the earlier 3-epoch run
+    cfg = TrainConfig(max_epochs=3, patience=None, checkpoint_dir=None)
     model = CPA(train_cfg=cfg, seed=0).fit(train, val)
+    print("device:", model.device)
+    print("discriminator built:", model.disc_ is not None)
+    print("train_total by epoch:", [round(r["train_total"], 3) for r in model.history_])
+    print("earlier run:          [85.185, 62.237, 57.801]")
 
-    history = pd.DataFrame(model.history_)
-    print()
-    print(history.round(3).to_string(index=False))
-    print("train recon decreased:", history.train_recon.iloc[-1] < history.train_recon.iloc[0])
-    print("best epoch:", model.best_epoch_)
-    print(
-        "restored weights reproduce the best score:",
-        np.isclose(model.val_de_mse(), history.val_de_mse.min(), atol=1e-6),
-    )
-    print("checkpoint files:", sorted(p.name for p in (Path(ckpt) / "cpa_seed0").iterdir()))
-    del model
-    gc.collect()
-
-    # Run 2: learning rate 0, so the score cannot improve after epoch 1
-    cfg = TrainConfig(lr=0.0, max_epochs=20, patience=2, checkpoint_dir=None)
-    model = CPA(train_cfg=cfg, seed=0).fit(train, val)
-    print("\nlr = 0: epochs run:", len(model.history_), "| best epoch:", model.best_epoch_)
+    # Run 2: adversary on
+    cfg = TrainConfig(max_epochs=20, patience=None, checkpoint_dir=None, log_every=5)
+    model = CPA(cfg=ModelConfig(adv_weight=10.0), train_cfg=cfg, seed=0).fit(train, val)
+    print("\nprior loss (no perturbation information):", round(model.adv_prior_loss_, 3))
+    h = pd.DataFrame(model.history_)
+    print(h[["epoch", "train_recon", "train_kl", "train_adv_d", "train_adv_conf", "val_de_mse"]]
+        .iloc[[0, 1, 4, 9, 14, 19]].round(3).to_string(index=False))
+    print("any NaN:", bool(h.isna().any().any()))

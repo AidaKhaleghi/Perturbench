@@ -16,6 +16,8 @@ class ModelConfig:
     latent_dim: int = 64
     hidden_dim:int = 512
     kl_weight: float = 1e-3
+    adv_weight: float = 0
+    disc_hidden_dim: int = 128
 
 @dataclass
 class TrainConfig:
