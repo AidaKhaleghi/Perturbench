@@ -9,7 +9,7 @@ No CPA variant beats the additive baseline in this setup.
 The best CPA variant is close to additive but not better.
 The best CPA variant depends strongly on how similar a test pair is to the training perturbations. Additive depends on this much less.
 
-![Main results on the test set](docs\plot_main_results_norman2019.png)
+![Main results on the test set](docs/plot_main_results_norman2019.png)
 
 *Figure 1. Test-set results on Norman 2019. Bars show the mean over 5 seeds of the per-seed mean over 39 test perturbations. Error bars show the standard deviation over seeds, and dots show single seeds. The mean and additive baselines are deterministic and have no error bars.*
 
@@ -81,7 +81,7 @@ Control cells concentrate in the center of the UMAP.
 Some groups at the edges contain almost no control cells.
 UMAP is a method that places similar cells close together on a 2D plane.
 
-![Dataset overview](docs\plot1_dataset_overview.png)
+![Dataset overview](docs/plot1_dataset_overview.png)
 
 *Figure 2. Cells per perturbation, left, and a UMAP of 20,000 random cells colored by perturbation type, right.*
 
@@ -309,15 +309,15 @@ It shows how much the result depends on which 39 perturbations are in the test s
 For Pearson, a positive difference means CPA is better.
 For MSE, a negative difference means CPA is better.
 
-![Per-perturbation comparison of cpa and additive](docs\plot_per_perturbation_cpa.png)
+![Per-perturbation comparison of cpa and additive](docs/plot_per_perturbation_cpa.png)
 
 *Figure 4. Per-perturbation comparison of CPA with KL weight 30 and the additive baseline on the 39 test perturbations. CPA values are means over 5 seeds. Left: Pearson correlation. Right: delta MSE on log axes. The dashed line marks equal scores.*
 
 The plots of the other two variants are shown below.
 Both variants are worse than additive on almost every perturbation.
 
-![Per-perturbation comparison of cpa_small_kl and additive](docs\plot_per_perturbation_cpa_small_kl.png)
-![Per-perturbation comparison of cpa_adv and additive](docs\plot_per_perturbation_cpa_adv.png)
+![Per-perturbation comparison of cpa_small_kl and additive](docs/plot_per_perturbation_cpa_small_kl.png)
+![Per-perturbation comparison of cpa_adv and additive](docs/plot_per_perturbation_cpa_adv.png)
 
 *Figure 5. Per-perturbation comparison of cpa_small_kl and cpa_adv and the additive baseline on the 39 test perturbations.*
 
@@ -355,7 +355,7 @@ The analysis in the next section looks at these two pairs again.
 This analysis uses the predictions of all models on the 39 test perturbations.
 The values of `cpa` are means over 5 seeds.
 
-![Generalization curves](docs\plot_generalization.png)
+![Generalization curves](docs/plot_generalization.png)
 
 *Figure 6. Performance against similarity to the training deltas, a and b, and against interaction strength, c, for 39 test pairs. Lines are linear fits with 95% bootstrap bands.*
 
