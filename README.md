@@ -56,7 +56,7 @@ So our results agree with their claim and do not confirm it.
 
 ## Data
 
-We use the Norman 2019 Perturb-seq dataset from the scPerturb collection.
+We use the Norman 2019 Perturb-seq dataset from the [scPerturb](https://www.nature.com/articles/s41592-023-02144-y) collection.
 It uses K562 cells and CRISPR activation.
 Each perturbation switches on one or two genes.
 
@@ -382,7 +382,7 @@ This model predicts almost no shift, so its Pearson values are close to noise.
 The interaction strength of the test pairs has a median of 0.32.
 One pair, ZC3HAV1_CEBPE, has 0.99.
 The next pair has 0.66.
-The trend lines in Figure 5c depend on this point.
+The trend lines in Figure 6c depend on this point.
 
 | Model | Weak-interaction half | Strong-interaction half | MSE vs interaction |
 |---|---|---|---|
@@ -494,34 +494,69 @@ Install the package with `uv`.
 
 ```bash
 git clone https://github.com/AidaKhaleghi/Perturbench.git
-cd pertbench
+cd Perturbench
 uv venv
 source .venv/bin/activate   # on Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-Run the pipeline in this order.
+Run every command from the repository root.
+The scripts use relative paths such as `data/` and `results/`.
+
+**1. Data.**
 
 ```bash
-python -m pertbench.data.download
-python -m pertbench.data.preprocess
-python scripts/plot_overview.py
-python scripts/train_variants.py
-python scripts/plot_training.py
-python -m pertbench.benchmark
-python scripts/plot_results.py
-python scripts/plot_per_perturbation.py
-python scripts/export_predictions.py
-python scripts/tables.py
-python scripts/wrapup.py
-python scripts/plot_generalization.py
-python scripts/plot_gene_level.py
-python scripts/plot_embeddings.py
+python -m pertbench.data.download      # data/raw/norman2019.h5ad
+python -m pertbench.data.preprocess    # data/processed/norman2019.h5ad
+python -m pertbench.plotting.overview  # Figure 2
 ```
 
-The scripts need the checkpoints in `results/checkpoints/`.
-The export step reads them and saves the predictions to `results/predictions/`.
+**2. Hyperparameter selection (optional).**
+The chosen settings are already frozen in `src/pertbench/models/variants.py`.
+Run the sweeps only to reproduce the tables in the Hyperparameter selection section.
+They use the validation set and write to `results/sweep_*.csv`.
 
+```bash
+python -m pertbench.scripts.sweep_kl
+python -m pertbench.scripts.sweep_arch
+python -m pertbench.scripts.sweep_adv
+```
+
+**3. Training curves.**
+This trains the three CPA variants once with seed 0.
+It also saves the validation score of both baselines to `results/val_references.csv`.
+
+```bash
+python -m pertbench.scripts.train_variants
+python -m pertbench.scripts.plot_training          # Figure 3
+```
+
+**4. Benchmark.**
+This fits both baselines and the three CPA variants with 5 seeds each, and scores them on the test set.
+
+```bash
+python -m pertbench.benchmark                      # results/benchmark.csv
+python -m pertbench.scripts.plot_results           # Figure 1
+python -m pertbench.scripts.plot_per_perturbation  # Figures 4 and 5
+```
+
+**5. Analysis.**
+These scripts read the checkpoints in `results/checkpoints/`, which the benchmark writes.
+The export step saves the predictions to `results/predictions/`.
+Run it before the others.
+
+```bash
+python -m pertbench.scripts.export_predictions
+python -m pertbench.scripts.tables                 # results/table/per_perturbation.csv
+python -m pertbench.scripts.wrap_up                # prints the numbers quoted in Results
+python -m pertbench.scripts.plot_generalization    # Figure 6
+python -m pertbench.scripts.plot_gene_level        # Figure 7
+python -m pertbench.scripts.plot_embeddings        # Figure 8
+```
+
+Notes.
+
+- Figures are saved to `figures/` as PNG at 300 DPI and as SVG.
 - The benchmark writes one file for each run to `results/runs/`. A restarted benchmark skips finished runs.
 - Training uses a GPU if one is available.
 
@@ -530,14 +565,31 @@ The export step reads them and saves the predictions to `results/predictions/`.
 ```
 src/pertbench/
     config.py          settings as dataclasses
-    benchmark.py       runs all models and writes the results table
-    analysis.py        similarity, interaction and residual helpers for Week 5
-    data/              download, preprocessing, split, tensors
-    models/            base interface, baselines, CPA module, CPA wrapper, variants
+    benchmark.py       fits all models, scores them on the test set, writes results/benchmark.csv
+    analysis.py        helpers for similarity, interaction strength and residual correlation
+    data/              download, preprocessing, perturbation split, tensors for training
+    models/            model interface, baselines, CPA module, CPA wrapper, frozen variants
     eval/              top DE genes and metrics
     plotting/          shared style and one module per figure
-scripts/               one script per figure, sweep or check
-docs/                  prediction log and result tables
+    scripts/           sweeps, training, analysis and one script per figure
+docs/                  PNG copies of the figures shown in this README
+pyproject.toml         package metadata and dependencies
+```
+
+Folders that the pipeline creates and git ignores:
+
+```
+data/
+    raw/               downloaded h5ad file
+    processed/         normalized data with 2,065 genes
+results/
+    runs/              one metrics file per model and seed
+    checkpoints/       weights and training history of each CPA run
+    predictions/       saved predictions of every model on the test set
+    table/             per-perturbation table used by the analysis figures
+    benchmark.csv      all test metrics, combined
+    sweep_*.csv        hyperparameter sweeps
+    val_references.csv validation scores of the two baselines
 figures/               PNG at 300 DPI and SVG for every figure
 ```
 
@@ -549,8 +601,8 @@ figures/               PNG at 300 DPI and SVG for every figure
 
 ## References
 
-- Norman et al., 2019. Exploring genetic interaction manifolds constructed from rich single-cell phenotypes. Science.
-- Peidli et al., scPerturb: harmonized single-cell perturbation data. Nature Methods.
-- Lotfollahi et al., Predicting cellular responses to complex perturbations in high-throughput screens. The CPA paper.
-- Roohani et al., Predicting transcriptional outcomes of novel multigene perturbations with GEARS.
-- Ahlmann-Eltze, Huber and Anders, 2025. Deep-learning-based gene perturbation effect prediction does not yet outperform simple linear baselines.
+- Norman et al., 2019. [Exploring genetic interaction manifolds constructed from rich single-cell phenotypes](https://www.science.org/doi/10.1126/science.aax4438). Science.
+- Peidli et al., 2024. [scPerturb: harmonized single-cell perturbation data](https://www.nature.com/articles/s41592-023-02144-y). Nature Methods.
+- Lotfollahi et al., 2023. [Predicting cellular responses to complex perturbations in high-throughput screens](https://www.embopress.org/doi/full/10.15252/msb.202211517). Molecular Systems Biology. The CPA paper.
+- Roohani et al., 2024. [Predicting transcriptional outcomes of novel multigene perturbations with GEARS](https://www.nature.com/articles/s41587-023-01905-6). Nature Biotechnology.
+- Ahlmann-Eltze, Huber and Anders, 2025. [Deep-learning-based gene perturbation effect prediction does not yet outperform simple linear baselines](https://www.nature.com/articles/s41592-025-02772-6). Nature Methods.

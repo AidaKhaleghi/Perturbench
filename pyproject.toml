@@ -11,6 +11,8 @@ dependencies = [
     "pandas",
     "scikit-learn",
     "matplotlib",
+    "scipy",
+    "umap-learn",
 ]
 
 [project.optional-dependencies]

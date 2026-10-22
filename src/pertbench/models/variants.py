@@ -1,7 +1,7 @@
 from pertbench.config import ModelConfig, TrainConfig
 from pertbench.models.cpa_model import CPA
 
-# Settings chosen on the validation set only (Week 3 sweeps).
+# Settings chosen on the validation set only (see the sweep scripts).
 VARIANT_MODEL_CONFIGS = {
     "cpa": ModelConfig(latent_dim=64, kl_weight=30.0),
     "cpa_small_kl": ModelConfig(latent_dim=64, kl_weight=1e-3),

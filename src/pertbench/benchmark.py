@@ -132,5 +132,5 @@ if __name__ == "__main__":
         (~metrics["exclude_own_genes"]) & metrics["model"].isin(["mean", "additive"])
     ]
     print(baselines.groupby(["model", "metric"])["value"].mean().unstack("metric").round(3))
-    print("Week 2: additive mse 0.045 pearson 0.960 direction 0.996")
-    print("Week 2: mean     mse 0.289 pearson 0.538 direction 0.862")
+    print("Reference: additive mse 0.045 pearson 0.960 direction 0.996")
+    print("Reference: mean     mse 0.289 pearson 0.538 direction 0.862")
